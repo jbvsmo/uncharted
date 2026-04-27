@@ -1,4 +1,4 @@
-"""Interactive game loop: raw single-key input, in-place redraw via Rich Live.
+"""Interactive game loop: raw single-key input, in-place redraw.
 
 Two modes (vim-style):
   NORMAL   — single keys do things (wasd/arrows move, m/c/l/g/?/x switch view, ...)
@@ -9,7 +9,6 @@ from __future__ import annotations
 import sys
 
 from rich.console import Console
-from rich.live import Live
 
 from ..ui import render
 from ..ui.keys import Key, raw_mode, read_key
@@ -199,22 +198,81 @@ def run(console: Console, gs: GameState) -> None:
         return
 
     with raw_mode(sys.stdin.fileno()):
-        with Live(
-            _screen(s),
-            console=console,
-            screen=False,
-            auto_refresh=False,
-            transient=False,
-        ) as live:
-            while not s.quit:
-                try:
-                    k = read_key()
-                except (KeyboardInterrupt, EOFError):
-                    break
-                if s.mode == render.MODE_NORMAL:
-                    _handle_normal(s, k)
+        # Per-line diff state. We will redraw only lines that changed.
+        prev_lines: list[str] = []
+        cur_row = [0]
+
+        def draw() -> None:
+            with console.capture() as cap:
+                console.print(_screen(s))
+            text = cap.get()
+            if text.endswith("\n"):
+                text = text[:-1]
+            new_lines = text.split("\n")
+
+            buf: list[str] = []
+
+            if not prev_lines:
+                # first frame: just print it
+                buf.append(text)
+                cur = len(new_lines) - 1
+            else:
+                # move cursor to top of previous frame (row 0, col 1)
+                if cur_row[0] > 0:
+                    buf.append(f"\x1b[{cur_row[0]}F")
                 else:
-                    _handle_command(s, k)
-                live.update(_screen(s), refresh=True)
+                    buf.append("\r")
+                cur = 0
+                total = max(len(prev_lines), len(new_lines))
+                for i in range(total):
+                    new = new_lines[i] if i < len(new_lines) else ""
+                    old = prev_lines[i] if i < len(prev_lines) else None
+                    if i < len(new_lines) and new == old:
+                        continue  # unchanged, leave it alone
+                    # navigate to row i, column 1
+                    if i > cur:
+                        buf.append(f"\x1b[{i - cur}E")  # cursor next line
+                    elif i < cur:
+                        buf.append(f"\x1b[{cur - i}F")  # cursor prev line
+                    else:
+                        buf.append("\r")
+                    buf.append("\x1b[2K")  # erase entire current line
+                    if i < len(new_lines):
+                        buf.append(new)
+                    cur = i
+                # if previous frame was taller, clear any leftover lines below
+                if len(prev_lines) > len(new_lines):
+                    last = len(new_lines) - 1
+                    if cur != last:
+                        if last > cur:
+                            buf.append(f"\x1b[{last - cur}E")
+                        else:
+                            buf.append(f"\x1b[{cur - last}F")
+                        cur = last
+                    # move just past the last new line and erase to end
+                    buf.append("\x1b[1E\x1b[J\x1b[1F")
+                    cur = last
+
+            sys.stdout.write("".join(buf))
+            sys.stdout.flush()
+
+            prev_lines[:] = new_lines
+            cur_row[0] = cur
+
+        sys.stdout.write("\x1b[?25l")  # hide cursor for the whole session
+        sys.stdout.flush()
+        draw()
+        while not s.quit:
+            try:
+                k = read_key()
+            except (KeyboardInterrupt, EOFError):
+                break
+            if s.mode == render.MODE_NORMAL:
+                _handle_normal(s, k)
+            else:
+                _handle_command(s, k)
+            draw()
+        sys.stdout.write("\x1b[?25h\n")  # restore cursor, then newline
+        sys.stdout.flush()
 
     console.print("[grey50]you fade from the world.[/grey50]")
