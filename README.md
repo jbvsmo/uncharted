@@ -14,11 +14,10 @@ uv run uncharted --seed 42    # reproducible world (shareable)
 uv run uncharted --width 48 --height 20
 ```
 
-System-wide:
+Try it straight from GitHub:
 
 ```sh
-uv build
-uvx --from dist/uncharted-0.1.0-py3-none-any.whl uncharted --seed 42
+uvx --from git+https://github.com/jbvsmo/uncharted uncharted --seed 42
 ```
 
 ## How to play
@@ -26,12 +25,12 @@ uvx --from dist/uncharted-0.1.0-py3-none-any.whl uncharted --seed 42
 The screen has three regions and refreshes in place:
 
 ```
-┌─ view (map | meta: codex / legend / help) ─┐
-│  ...                                        │
-└─────────────────────────────────────────────┘
-┌─ examine (only on map, when toggled with x) ┐
-│  ...                                        │
-└─────────────────────────────────────────────┘
+┌─ view (map | meta: codex / legend / help) ───┐
+│  ...                                         │
+└──────────────────────────────────────────────┘
+┌─ examine (only on map, when toggled with x) ─┐
+│  ...                                         │
+└──────────────────────────────────────────────┘
 description of where you stand (and what's here)
 [ MODE ]   hints, or :command-line buffer
 ```
