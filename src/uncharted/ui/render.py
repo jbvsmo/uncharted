@@ -111,11 +111,14 @@ def _help_panel() -> Panel:
 
 # ---- legend ----------------------------------------------------------------
 
-def _legend_panel() -> Panel:
+def _legend_panel(gs: GameState) -> Panel:
+    revealed_biomes = {gs.world.biome_at(x, y) for x, y in gs.revealed}
     table = Table(border_style="grey39", show_header=True, expand=False)
     table.add_column("glyph", justify="center")
     table.add_column("biome")
     for b in Biome:
+        if b not in revealed_biomes:
+            continue
         i = b.info
         table.add_row(Text(i.glyph, style=i.color), i.name)
     table.add_row(Text("@", style="bold white"), "you")
@@ -127,7 +130,7 @@ def _legend_panel() -> Panel:
 
 def _meta_panel(gs: GameState) -> Panel:
     cols = Columns(
-        [_codex_panel(gs), _legend_panel(), _help_panel()],
+        [_codex_panel(gs), _legend_panel(gs), _help_panel()],
         equal=False, expand=False, padding=(0, 1),
     )
     return Panel(cols, title="meta · codex · legend · help",

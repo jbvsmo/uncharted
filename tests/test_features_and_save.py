@@ -7,6 +7,16 @@ from uncharted.world.features import CATALOGUE, by_id
 from uncharted.world.generator import generate
 
 
+def test_catalogue_is_significantly_larger():
+    assert len(CATALOGUE) >= 80
+
+
+def test_feature_density_stays_stable():
+    for width, height in ((10, 6), (24, 12), (32, 16), (48, 20)):
+        w = generate(seed=123, width=width, height=height)
+        assert len(w.features) == max(8, (width * height) // 40)
+
+
 def test_features_are_placed_deterministically():
     a = generate(seed=123, width=24, height=12)
     b = generate(seed=123, width=24, height=12)

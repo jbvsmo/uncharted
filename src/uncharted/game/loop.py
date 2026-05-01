@@ -272,6 +272,11 @@ def run(console: Console, gs: GameState) -> None:
             else:
                 _handle_command(s, k)
             draw()
+        # Move cursor to the bottom of the last frame so the newline lands
+        # cleanly below it instead of splitting a line mid-frame.
+        bottom = len(prev_lines) - 1
+        if cur_row[0] < bottom:
+            sys.stdout.write(f"\x1b[{bottom - cur_row[0]}E")
         sys.stdout.write("\x1b[?25h\n")  # restore cursor, then newline
         sys.stdout.flush()
 

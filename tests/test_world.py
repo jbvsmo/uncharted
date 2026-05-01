@@ -1,4 +1,5 @@
 from uncharted.game.state import GameState
+from uncharted.world.biomes import Biome
 from uncharted.world.generator import generate
 
 
@@ -35,3 +36,29 @@ def test_movement_bounds():
             moved += 1
     assert gs.px == w.width - 1
     assert moved < 10
+
+
+def test_spawn_is_on_land():
+    for seed in range(1, 20):
+        w = generate(seed=seed, width=32, height=16)
+        assert not w.biome_at(*w.spawn).is_water
+
+
+def test_specialised_biomes_can_appear_across_seeds():
+    seen = {
+        b
+        for seed in range(1, 41)
+        for row in generate(seed=seed, width=32, height=16).tiles
+        for b in row
+    }
+    for biome in {
+        Biome.RAINFOREST,
+        Biome.ISLAND,
+        Biome.FJORD,
+        Biome.CITY,
+        Biome.RUINS,
+        Biome.VOLCANO,
+        Biome.FARMLAND,
+        Biome.DEEP_SEA,
+    }:
+        assert biome in seen
